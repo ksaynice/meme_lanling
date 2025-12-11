@@ -15,9 +15,27 @@ const SearchGallery = () => {
     const [results, setResults] = useState<SearchResult[]>([]);
     const [searching, setSearching] = useState(false);
 
+    // Initial load: Fetch all images
+    React.useEffect(() => {
+        const fetchAll = async () => {
+            setSearching(true);
+            try {
+                const response = await fetch('/api/search');
+                if (response.ok) {
+                    setResults(await response.json());
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setSearching(false);
+            }
+        };
+        fetchAll();
+    }, []);
+
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!query.trim()) return;
+        // Allow empty query to reset search (show all)
 
         setSearching(true);
         try {
@@ -74,8 +92,10 @@ const SearchGallery = () => {
                     </div>
                 ))}
             </div>
-            {results.length === 0 && !searching && query && (
-                <p className="text-center text-slate-500 py-8">No results found.</p>
+            {results.length === 0 && !searching && (
+                <p className="text-center text-slate-500 py-8">
+                    {query ? 'No matching images found.' : 'No images uploaded yet.'}
+                </p>
             )}
         </div>
     );

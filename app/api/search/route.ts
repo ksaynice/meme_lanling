@@ -8,34 +8,41 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
 
-    if (!query) {
-        return NextResponse.json([]);
-    }
-
     try {
-        // Segment query
-        const segmentedQuery = segmentit.doSegment(query, { simple: true }).join(' ');
+        let result;
 
-        // Perform Search
-        // Using ILIKE with %keyword% for simple MVP matching.
-        // For robust production search, we would use Postgres tsvector/tsquery.
-        // But since we pre-segmented the text in DB, simple token matching might work "okay" with ILIKE for MVP.
-        // Actually, let's search for the raw query OR segmented interactions.
-        // Better yet: Since we stored "segmented" text in DB, we should match against segmented query parts?
-        // Let's stick to simple ILIKE %query% against the segmented text for now.
+        if (!query) {
+            // No query: Return all images
+            result = await sql`
+                SELECT id, filename, url, upload_time 
+                FROM images 
+                ORDER BY upload_time DESC
+            `;
+        } else {
+            // Segment query
+            const segmentedQuery = segmentit.doSegment(query, { simple: true }).join(' ');
 
-        // Note: Vercel Postgres `sql` template literal safely parameterizes input.
-        // We construct the pattern %query% manually.
-        const pattern = `%${query}%`;
+            // Perform Search
+            // Using ILIKE with %keyword% for simple MVP matching.
+            // For robust production search, we would use Postgres tsvector/tsquery.
+            // But since we pre-segmented the text in DB, simple token matching might work "okay" with ILIKE for MVP.
+            // Actually, let's search for the raw query OR segmented interactions.
+            // Better yet: Since we stored "segmented" text in DB, we should match against segmented query parts?
+            // Let's stick to simple ILIKE %query% against the segmented text for now.
 
-        // Also try to match individual segments logic if needed, but keeping it simple first.
+            // Note: Vercel Postgres `sql` template literal safely parameterizes input.
+            // We construct the pattern %query% manually.
+            const pattern = `%${query}%`;
 
-        const result = await sql`
-      SELECT id, filename, url, upload_time 
-      FROM images 
-      WHERE text_content ILIKE ${pattern} 
-      ORDER BY upload_time DESC
-    `;
+            // Also try to match individual segments logic if needed, but keeping it simple first.
+
+            result = await sql`
+                SELECT id, filename, url, upload_time 
+                FROM images 
+                WHERE text_content ILIKE ${pattern} 
+                ORDER BY upload_time DESC
+            `;
+        }
 
         // Map to frontend expected format
         const startPath = '/'; // Vercel Blob returns absolute URLs usually, so we don't need relative path prefix logic like local

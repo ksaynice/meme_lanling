@@ -1,7 +1,6 @@
 import { put } from '@vercel/blob';
 import { sql } from '@vercel/postgres';
 import { NextResponse } from 'next/server';
-import Tesseract from 'tesseract.js';
 import { Segment, useDefault } from 'segmentit';
 
 // Initialize Segmentit for Chinese segmentation
@@ -11,6 +10,7 @@ export async function POST(request: Request) {
     try {
         const formData = await request.formData();
         const file = formData.get('file') as File;
+        const extractedText = formData.get('text') as string || ''; // Get text from client
 
         if (!file) {
             return NextResponse.json({ error: 'No file provided' }, { status: 400 });
@@ -19,28 +19,19 @@ export async function POST(request: Request) {
         // 1. Upload to Vercel Blob
         const blob = await put(file.name, file, {
             access: 'public',
+            addRandomSuffix: true,
         });
 
-        // 2. OCR using Tesseract.js
-        // Note: Tesseract.js loads workers from CDN. In serverless, this might be slow on cold start.
-        // 'chi_sim' is Chinese Simplified.
-        const { data: { text } } = await Tesseract.recognize(
-            blob.url,
-            'chi_sim+eng',
-            {
-                logger: m => console.log(m)
-            }
-        );
-
-        // 3. Segment text for Search
-        const segmentedText = segmentit.doSegment(text, { simple: true }).join(' ');
+        // 2. Segment text for Search (Server-side segmentation is fine, it's fast)
+        // We segment both the filename and the OCR text provided by the client
+        const segmentedText = segmentit.doSegment(extractedText, { simple: true }).join(' ');
         const segmentedFilename = segmentit.doSegment(file.name, { simple: true }).join(' ');
 
         // Combine for full text search context
         const fullSearchText = `${segmentedFilename} ${segmentedText}`;
 
-        // 4. Save to Vercel Postgres
-        // Ensure table exists (naive approach for MVP, better to do in migration script)
+        // 3. Save to Vercel Postgres
+        // Ensure table exists (naive approach for MVP)
         await sql`CREATE TABLE IF NOT EXISTS images (
       id SERIAL PRIMARY KEY,
       filename TEXT NOT NULL,
