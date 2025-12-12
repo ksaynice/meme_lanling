@@ -39,7 +39,7 @@ export async function GET(request: Request) {
             result = await sql`
                 SELECT id, filename, url, upload_time 
                 FROM images 
-                WHERE text_content ILIKE ${pattern} 
+                WHERE (text_content ILIKE ${pattern} OR filename ILIKE ${pattern})
                 ORDER BY upload_time DESC
             `;
         }

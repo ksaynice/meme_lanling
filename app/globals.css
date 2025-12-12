@@ -24,3 +24,105 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@layer components {
+
+  /* Search Component Styles */
+  .search-container {
+    @apply relative max-w-2xl mx-auto z-10;
+  }
+
+  .search-input {
+    @apply w-full pl-6 pr-14 py-4 text-lg rounded-full border-2 border-transparent bg-white shadow-lg ring-1 ring-black/5 placeholder:text-slate-400 text-slate-800 outline-none transition-all focus:border-violet-500 focus:ring-4 focus:ring-violet-500/20 group-hover:shadow-xl;
+  }
+
+  .btn-search {
+    @apply absolute right-3 top-1/2 -translate-y-1/2 p-2 bg-violet-600 text-white rounded-full hover:bg-violet-700 transition-colors shadow-md;
+  }
+
+  /* Gallery Grid Styles */
+  .gallery-grid {
+    @apply grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6;
+  }
+
+  .gallery-card {
+    @apply relative bg-white rounded-3xl overflow-hidden shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer;
+  }
+
+  .card-image-container {
+    @apply aspect-video relative bg-gray-50 overflow-hidden;
+    /* 'bg-gray-50' acts as the 'white border' (padding area) when image is contained */
+  }
+
+  .card-image {
+    @apply object-contain w-full h-full transition-transform duration-500 group-hover:scale-110;
+  }
+
+  .card-overlay {
+    @apply absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4;
+  }
+
+  /* Lightbox Styles */
+  .lightbox-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm;
+  }
+
+  .lightbox-content {
+    @apply relative max-w-3xl max-h-[90vh] overflow-hidden rounded-lg shadow-2xl;
+  }
+
+  .lightbox-image {
+    @apply w-full h-full object-contain;
+  }
+
+  .lightbox-close-btn {
+    @apply absolute top-4 right-4 p-2 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors z-10;
+  }
+
+  .lightbox-nav-btn {
+    @apply absolute top-1/2 -translate-y-1/2 p-3 bg-black/50 text-white rounded-full hover:bg-black/70 transition-colors z-10;
+  }
+
+  .lightbox-nav-btn.left {
+    @apply left-4;
+  }
+
+  .lightbox-nav-btn.right {
+    @apply right-4;
+  }
+
+  /* Title Display */
+  .title-display {
+    @apply flex items-center gap-3 cursor-pointer;
+  }
+
+  .title-text {
+    @apply text-2xl font-bold text-white text-center break-words max-w-lg;
+  }
+
+  .edit-icon {
+    @apply opacity-0 group-hover/title:opacity-100 text-white/50 hover:text-white transition-opacity;
+  }
+
+  /* Button Utils */
+  /* Button Utils flattened to avoid circular @apply errors */
+  .btn-primary {
+    @apply px-6 py-3 font-bold rounded-full transition-colors flex items-center gap-2 shadow-lg bg-white text-slate-900 hover:bg-slate-200;
+  }
+
+  .btn-secondary {
+    @apply px-6 py-3 font-bold rounded-full transition-colors flex items-center gap-2 shadow-lg bg-slate-800 text-white hover:bg-slate-700;
+  }
+
+  .btn-icon {
+    @apply p-2 rounded-lg text-white;
+  }
+
+  .btn-confirm {
+    @apply bg-green-600 hover:bg-green-700;
+  }
+
+  .btn-cancel {
+    @apply bg-slate-600 hover:bg-slate-700;
+  }
+}

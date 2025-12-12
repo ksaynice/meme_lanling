@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Tesseract from 'tesseract.js';
+import { processImage } from '@/utils/imageProcessor';
 
 interface UploadItem {
     id: string; // Unique ID for list rendering
@@ -44,20 +45,27 @@ const Upload = () => {
             };
 
             try {
-                updateItem('ocr', 0, 'Initializing OCR...');
+                updateItem('ocr', 0, 'Preprocessing Image...');
 
-                // 1. OCR (Client Side)
+                // 1. Preprocess Image (Enhance Contrast for Memes)
+                // We use dynamic import during runtime if needed, or just import at top.
+                // Converting File -> Base64 Data URL optimized for OCR
+                const optimizedImage = await processImage(currentItem.file);
+
+                updateItem('ocr', 10, 'Initializing OCR Engine...');
+
+                // 2. OCR (Client Side)
                 const { data: { text } } = await Tesseract.recognize(
-                    currentItem.file,
+                    optimizedImage, // Pass the processed image URL
                     'chi_sim+eng',
                     {
                         logger: (m) => {
                             if (m.status === 'recognizing text') {
                                 // Clamp progress between 0-90 during OCR
-                                const p = Math.round(m.progress * 90);
-                                updateItem('ocr', p, `Analyzing Text... ${p}%`);
+                                const p = Math.round(m.progress * 80) + 10;
+                                updateItem('ocr', p, `Analyzing Text... ${Math.round(m.progress * 100)}%`);
                             } else {
-                                updateItem('ocr', 0, m.status);
+                                updateItem('ocr', 10, m.status);
                             }
                         }
                     }
@@ -82,7 +90,7 @@ const Upload = () => {
                     throw new Error(errData.details || errData.error || 'Upload failed');
                 }
 
-                updateItem('success', 100, 'Done');
+                updateItem('success', 100, `Extracted: ${text}`);
 
             } catch (error) {
                 console.error(error);
@@ -137,10 +145,15 @@ const Upload = () => {
                         <div className="flex-1 min-w-0 mr-4">
                             <p className="text-sm font-medium text-slate-900 truncate">{item.file.name}</p>
                             <p className={`text-xs ${item.status === 'error' ? 'text-red-500' :
-                                    item.status === 'success' ? 'text-green-600' : 'text-slate-500'
+                                item.status === 'success' ? 'text-green-600' : 'text-slate-500'
                                 }`}>
                                 {item.message}
                             </p>
+                            {item.status === 'success' && (
+                                <p className="text-xs text-slate-400 mt-1 italic break-words">
+                                    OCR: {item.message.includes('Extracted') ? item.message.replace('Extracted: ', '') : '...'}
+                                </p>
+                            )}
                             {(item.status === 'ocr' || item.status === 'uploading') && (
                                 <div className="w-full bg-slate-200 rounded-full h-1.5 mt-1">
                                     <div className="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style={{ width: `${item.progress}%` }}></div>
@@ -155,7 +168,7 @@ const Upload = () => {
                     </div>
                 ))}
             </div>
-        </div>
+        </div >
     );
 };
 
