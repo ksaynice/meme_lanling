@@ -72,7 +72,7 @@ body {
   }
 
   .lightbox-image {
-    @apply w-full h-full object-contain;
+    @apply max-w-full max-h-[75vh] w-auto h-auto object-contain mx-auto;
   }
 
   .lightbox-close-btn {
