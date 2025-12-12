@@ -7,55 +7,54 @@ const segmentit = useDefault(new Segment());
 export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get('q');
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '12', 10);
+    const offset = (page - 1) * limit;
 
     try {
-        let result;
+        let rows;
+        // Fetch limit + 1 to detect if there are more items
+        const fetchLimit = limit + 1;
 
         if (!query) {
-            // No query: Return all images
-            result = await sql`
+            // No query: Return all images with pagination
+            const result = await sql`
                 SELECT id, filename, url, upload_time 
                 FROM images 
                 ORDER BY upload_time DESC
+                LIMIT ${fetchLimit} OFFSET ${offset}
             `;
+            rows = result.rows;
         } else {
-            // Segment query
-            const segmentedQuery = segmentit.doSegment(query, { simple: true }).join(' ');
-
-            // Perform Search
-            // Using ILIKE with %keyword% for simple MVP matching.
-            // For robust production search, we would use Postgres tsvector/tsquery.
-            // But since we pre-segmented the text in DB, simple token matching might work "okay" with ILIKE for MVP.
-            // Actually, let's search for the raw query OR segmented interactions.
-            // Better yet: Since we stored "segmented" text in DB, we should match against segmented query parts?
-            // Let's stick to simple ILIKE %query% against the segmented text for now.
-
-            // Note: Vercel Postgres `sql` template literal safely parameterizes input.
-            // We construct the pattern %query% manually.
+            // Search query with pagination
             const pattern = `%${query}%`;
-
-            // Also try to match individual segments logic if needed, but keeping it simple first.
-
-            result = await sql`
+            const result = await sql`
                 SELECT id, filename, url, upload_time 
                 FROM images 
                 WHERE (text_content ILIKE ${pattern} OR filename ILIKE ${pattern})
                 ORDER BY upload_time DESC
+                LIMIT ${fetchLimit} OFFSET ${offset}
             `;
+            rows = result.rows;
         }
 
-        // Map to frontend expected format
-        const startPath = '/'; // Vercel Blob returns absolute URLs usually, so we don't need relative path prefix logic like local
+        // Check for hasMore
+        const hasMore = rows.length > limit;
+        const data = hasMore ? rows.slice(0, limit) : rows;
 
-        const response = result.rows.map(row => ({
+        const results = data.map(row => ({
             id: row.id,
             filename: row.filename,
-            url: row.url, // Blob URLs are absolute https://...
+            url: row.url,
             path: row.url,
             upload_time: row.upload_time
         }));
 
-        return NextResponse.json(response);
+        return NextResponse.json({
+            results,
+            hasMore,
+            page
+        });
 
     } catch (error) {
         console.error('Search Error:', error);

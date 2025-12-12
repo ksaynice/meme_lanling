@@ -16,47 +16,48 @@ const SearchGallery = () => {
     const [results, setResults] = useState<SearchResult[]>([]);
     const [searching, setSearching] = useState(false);
     const [selectedImage, setSelectedImage] = useState<SearchResult | null>(null);
+    const [page, setPage] = useState(1);
+    const [hasMore, setHasMore] = useState(false);
 
     // Initial load
     useEffect(() => {
-        const fetchAll = async () => {
-            setSearching(true);
-            try {
-                const response = await fetch('/api/search');
-                if (response.ok) {
-                    setResults(await response.json());
-                }
-            } catch (e) {
-                console.error(e);
-            } finally {
-                setSearching(false);
-            }
-        };
-        fetchAll();
+        // Only load on mount or when explicit search action happens, handled by fetchImages
+        fetchImages(1, '', true);
     }, []);
 
-    // Close lightbox on Escape
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') setSelectedImage(null);
-        };
-        window.addEventListener('keydown', handleEsc);
-        return () => window.removeEventListener('keydown', handleEsc);
-    }, []);
+    const fetchImages = async (pageNum: number, searchQuery: string, reset: boolean) => {
+        if (reset) {
+            setResults([]);
+            setPage(1);
+        }
 
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault();
         setSearching(true);
         try {
-            const response = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
-            if (!response.ok) throw new Error('Search failed');
-            setResults(await response.json());
-        } catch (error) {
-            console.error(error);
-            setResults([]);
+            const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&page=${pageNum}&limit=12`);
+            if (res.ok) {
+                const data = await res.json();
+                if (reset) {
+                    setResults(data.results);
+                } else {
+                    setResults(prev => [...prev, ...data.results]);
+                }
+                setHasMore(data.hasMore);
+                setPage(pageNum);
+            }
+        } catch (e) {
+            console.error(e);
         } finally {
             setSearching(false);
         }
+    }
+
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault();
+        fetchImages(1, query, true);
+    };
+
+    const handleLoadMore = () => {
+        fetchImages(page + 1, query, false);
     };
 
     const downloadImage = (url: string, filename: string) => {
@@ -116,6 +117,19 @@ const SearchGallery = () => {
                 ))}
             </div>
 
+            {/* Load More Button */}
+            {hasMore && (
+                <div className="flex justify-center py-8">
+                    <button
+                        onClick={handleLoadMore}
+                        className="btn-primary"
+                        disabled={searching}
+                    >
+                        {searching ? 'Loading...' : 'Load More'}
+                    </button>
+                </div>
+            )}
+
             {results.length === 0 && !searching && (
                 <div className="text-center py-20">
                     <div className="inline-block p-6 rounded-full bg-white/50 backdrop-blur-sm mb-4">
@@ -126,6 +140,7 @@ const SearchGallery = () => {
                     </p>
                 </div>
             )}
+
 
             {/* Lightbox / Modal */}
             {selectedImage && (
